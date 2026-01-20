@@ -112,7 +112,7 @@ export async function PUT(request: Request) {
   // Get existing log to calculate duration
   const { data: existingLog } = await supabase
     .from('work_logs')
-    .select('date, start_time')
+    .select('date, start_time, end_time')
     .eq('id', id)
     .eq('user_id', user.id)
     .single()
