@@ -1,9 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export interface KPICalculationResult {
   work_hours_total: number
@@ -17,6 +19,7 @@ export async function calculateWorkHours(
   month: number,
   year: number
 ): Promise<number> {
+  const supabase = getSupabaseClient()
   const startDate = `${year}-${String(month).padStart(2, '0')}-01`
   const endDate = new Date(year, month, 0).toISOString().split('T')[0]
 
@@ -50,6 +53,7 @@ export async function calculateAverageResponseTime(
   month: number,
   year: number
 ): Promise<number> {
+  const supabase = getSupabaseClient()
   const startDate = `${year}-${String(month).padStart(2, '0')}-01`
   const endDate = new Date(year, month, 0).toISOString().split('T')[0]
 
@@ -77,6 +81,7 @@ export async function calculateTaskCompletionRate(
   month: number,
   year: number
 ): Promise<number> {
+  const supabase = getSupabaseClient()
   const startDate = `${year}-${String(month).padStart(2, '0')}-01`
   const endDate = new Date(year, month, 0).toISOString().split('T')[0]
 
@@ -106,6 +111,7 @@ export async function calculateProductivityScore(
   month: number,
   year: number
 ): Promise<number> {
+  const supabase = getSupabaseClient()
   const startDate = `${year}-${String(month).padStart(2, '0')}-01`
   const endDate = new Date(year, month, 0).toISOString().split('T')[0]
 
