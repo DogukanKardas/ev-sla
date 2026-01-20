@@ -17,7 +17,14 @@ export async function getCurrentUser() {
 
 export async function getUserProfile() {
   const supabase = await createClient()
-  const user = await getCurrentUser()
+  
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
 
   const { data: profile, error } = await supabase
     .from('user_profiles')
@@ -26,7 +33,8 @@ export async function getUserProfile() {
     .single()
 
   if (error || !profile) {
-    redirect('/login')
+    // Profile doesn't exist, redirect to setup page
+    redirect('/profile-setup')
   }
 
   return profile
