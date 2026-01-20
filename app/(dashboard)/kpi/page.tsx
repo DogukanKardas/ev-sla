@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
 
@@ -24,11 +24,7 @@ export default function KPIPage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
-  useEffect(() => {
-    loadKPIMetrics()
-  }, [selectedMonth, selectedYear])
-
-  const loadKPIMetrics = async () => {
+  const loadKPIMetrics = useCallback(async () => {
     setLoading(true)
     try {
       const response = await fetch(
@@ -43,7 +39,11 @@ export default function KPIPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedMonth, selectedYear])
+
+  useEffect(() => {
+    loadKPIMetrics()
+  }, [loadKPIMetrics])
 
   const calculateKPI = async () => {
     setLoading(true)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
 
@@ -38,12 +38,6 @@ export default function KPIEvaluation() {
     loadUsers()
   }, [])
 
-  useEffect(() => {
-    if (selectedUser) {
-      loadKPIMetric()
-    }
-  }, [selectedUser, selectedMonth, selectedYear])
-
   const loadUsers = async () => {
     try {
       const response = await fetch('/api/user-profiles/all')
@@ -57,7 +51,7 @@ export default function KPIEvaluation() {
     }
   }
 
-  const loadKPIMetric = async () => {
+  const loadKPIMetric = useCallback(async () => {
     setLoading(true)
     try {
       const response = await fetch(
@@ -71,6 +65,25 @@ export default function KPIEvaluation() {
       console.error('KPI metrik yüklenirken hata:', error)
     } finally {
       setLoading(false)
+    }
+  }, [selectedUser, selectedMonth, selectedYear])
+
+  useEffect(() => {
+    if (selectedUser) {
+      loadKPIMetric()
+    }
+  }, [selectedUser, loadKPIMetric])
+
+  const loadUsers = async () => {
+    try {
+      const response = await fetch('/api/user-profiles/all')
+      if (response.ok) {
+        const data = await response.json()
+        const employees = data.filter((u: UserProfile) => u.role === 'employee')
+        setUsers(employees)
+      }
+    } catch (error) {
+      console.error('Kullanıcılar yüklenirken hata:', error)
     }
   }
 

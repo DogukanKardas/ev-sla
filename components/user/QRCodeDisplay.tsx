@@ -42,6 +42,7 @@ export default function QRCodeDisplay({ qrCodeString, userName }: QRCodeDisplayP
     <div className="flex flex-col items-center space-y-4 p-6 bg-white rounded-lg shadow-md">
       <h3 className="text-lg font-semibold text-gray-900">{userName}</h3>
       <div className="p-4 bg-white rounded-lg border-2 border-gray-200">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={qrDataUrl} alt="QR Code" className="w-64 h-64" />
       </div>
       <p className="text-sm text-gray-600">Giriş/çıkış için bu QR kodu kullanın</p>

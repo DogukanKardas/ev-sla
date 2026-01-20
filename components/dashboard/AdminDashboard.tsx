@@ -91,7 +91,7 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Bilgilendirme</h2>
             <p className="text-gray-600">
-              Bu dashboard'dan tüm sistemi yönetebilir, kullanıcıları ekleyip çıkarabilir ve KPI değerlendirmeleri yapabilirsiniz.
+              Bu dashboard&apos;dan tüm sistemi yönetebilir, kullanıcıları ekleyip çıkarabilir ve KPI değerlendirmeleri yapabilirsiniz.
             </p>
           </div>
         </div>

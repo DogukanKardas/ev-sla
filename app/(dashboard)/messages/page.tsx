@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
 
@@ -21,11 +21,7 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(false)
   const [filterPlatform, setFilterPlatform] = useState<string>('all')
 
-  useEffect(() => {
-    loadMessages()
-  }, [filterPlatform])
-
-  const loadMessages = async () => {
+  const loadMessages = useCallback(async () => {
     setLoading(true)
     try {
       const url = filterPlatform !== 'all' 
@@ -41,7 +37,11 @@ export default function MessagesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filterPlatform])
+
+  useEffect(() => {
+    loadMessages()
+  }, [loadMessages])
 
   const handleResponse = async (messageId: string) => {
     try {
