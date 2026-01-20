@@ -12,7 +12,10 @@ export async function POST(request: NextRequest) {
 
     // Handle Teams webhook validation
     if (body.validationToken) {
-      return NextResponse.text(body.validationToken, { status: 200 })
+      return new Response(body.validationToken, {
+        status: 200,
+        headers: { 'Content-Type': 'text/plain' },
+      })
     }
 
     // Handle Teams notifications
