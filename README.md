@@ -60,3 +60,4 @@ Vercel'e deploy etmek için:
 3. Environment variables'ı ekleyin
 4. Deploy edin
 # ev-sla
+# ev-sla
