@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
@@ -10,7 +10,7 @@ export default function AttendancePage() {
   const [lastAttendance, setLastAttendance] = useState<any>(null)
   const [attendanceHistory, setAttendanceHistory] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
-  const scannerRef = useState<Html5QrcodeScanner | null>(null)
+  const scannerRef = useRef<Html5QrcodeScanner | null>(null)
 
   useEffect(() => {
     loadAttendanceHistory()
