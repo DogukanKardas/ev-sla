@@ -34,11 +34,7 @@ export default function KPIEvaluation() {
     comments: '',
   })
 
-  useEffect(() => {
-    loadUsers()
-  }, [])
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       const response = await fetch('/api/user-profiles/all')
       if (response.ok) {
@@ -49,7 +45,11 @@ export default function KPIEvaluation() {
     } catch (error) {
       console.error('Kullanıcılar yüklenirken hata:', error)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    loadUsers()
+  }, [loadUsers])
 
   const loadKPIMetric = useCallback(async () => {
     setLoading(true)
@@ -73,19 +73,6 @@ export default function KPIEvaluation() {
       loadKPIMetric()
     }
   }, [selectedUser, loadKPIMetric])
-
-  const loadUsers = async () => {
-    try {
-      const response = await fetch('/api/user-profiles/all')
-      if (response.ok) {
-        const data = await response.json()
-        const employees = data.filter((u: UserProfile) => u.role === 'employee')
-        setUsers(employees)
-      }
-    } catch (error) {
-      console.error('Kullanıcılar yüklenirken hata:', error)
-    }
-  }
 
   const calculateKPI = async () => {
     if (!selectedUser) return
