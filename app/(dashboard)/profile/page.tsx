@@ -1,15 +1,65 @@
-import { getUserProfile } from '@/lib/auth'
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 import QRCodeDisplay from '@/components/user/QRCodeDisplay'
 import LogoutButton from '@/components/auth/LogoutButton'
 
-export default async function ProfilePage() {
-  const profile = await getUserProfile()
-  const supabase = await createClient()
+export default function ProfilePage() {
+  const router = useRouter()
+  const [profile, setProfile] = useState<any>(null)
+  const [userEmail, setUserEmail] = useState<string>('')
+  const [loading, setLoading] = useState(true)
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const supabase = createClient()
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+
+        if (!user) {
+          router.push('/login')
+          return
+        }
+
+        setUserEmail(user.email || '')
+
+        const { data: profileData } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single()
+
+        if (profileData) {
+          setProfile(profileData)
+        } else {
+          router.push('/profile-setup')
+        }
+      } catch (error) {
+        console.error('Profil yüklenirken hata:', error)
+        router.push('/login')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProfile()
+  }, [router])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    )
+  }
+
+  if (!profile) {
+    return null
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -28,7 +78,7 @@ export default async function ProfilePage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700">E-posta</label>
-              <p className="mt-1 text-lg text-gray-900">{user?.email}</p>
+              <p className="mt-1 text-lg text-gray-900">{userEmail}</p>
             </div>
 
             <div>
