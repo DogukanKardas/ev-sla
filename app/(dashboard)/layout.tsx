@@ -1,15 +1,67 @@
-import { getUserProfile } from '@/lib/auth'
-import { redirect } from 'next/navigation'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import LogoutButton from '@/components/auth/LogoutButton'
 import DeviceTracking from '@/components/device/DeviceTracking'
 
-export default async function DashboardLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const profile = await getUserProfile()
+  const router = useRouter()
+  const [profile, setProfile] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const supabase = createClient()
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+
+        if (!user) {
+          router.push('/login')
+          return
+        }
+
+        const { data: profileData } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single()
+
+        if (profileData) {
+          setProfile(profileData)
+        } else {
+          router.push('/profile-setup')
+        }
+      } catch (error) {
+        console.error('Profil yüklenirken hata:', error)
+        router.push('/login')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProfile()
+  }, [router])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    )
+  }
+
+  if (!profile) {
+    return null
+  }
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard' },
