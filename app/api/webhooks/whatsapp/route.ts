@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     if (body['hub.mode'] === 'subscribe' && body['hub.verify_token']) {
       const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN
       if (body['hub.verify_token'] === verifyToken) {
-        return NextResponse.text(body['hub.challenge'], { status: 200 })
+        return new Response(body['hub.challenge'], { status: 200 })
       }
       return NextResponse.json({ error: 'Invalid verify token' }, { status: 403 })
     }
