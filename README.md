@@ -59,3 +59,4 @@ Vercel'e deploy etmek için:
 2. Vercel'de yeni proje oluşturun
 3. Environment variables'ı ekleyin
 4. Deploy edin
+# ev-sla
