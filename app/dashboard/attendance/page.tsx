@@ -189,6 +189,8 @@ export default function AttendancePage() {
                     }
 
                     if (locations.length > 0 && !validLocation && userLocation) {
+                      // TypeScript guard: userLocation is not null here
+                      const currentLocation = userLocation
                       const closestLocation = locations.reduce((closest, loc) => {
                         const locLat = typeof loc.latitude === 'string' 
                           ? parseFloat(loc.latitude) 
@@ -199,8 +201,8 @@ export default function AttendancePage() {
                         if (isNaN(locLat) || isNaN(locLon)) return closest
                         
                         const dist = calculateDistance(
-                          userLocation.latitude,
-                          userLocation.longitude,
+                          currentLocation.latitude,
+                          currentLocation.longitude,
                           locLat,
                           locLon
                         )
