@@ -53,11 +53,13 @@ export default function AdminTasksPage() {
     user_id: '',
     title: '',
     description: '',
+    status: 'pending' as 'pending' | 'in_progress' | 'completed' | 'cancelled',
     location_id: '',
     location_address: '',
     location_notes: '',
     due_date: '',
   })
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
 
   useEffect(() => {
     loadUsers()
@@ -117,38 +119,130 @@ export default function AdminTasksPage() {
     setLoading(true)
 
     try {
-      const response = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+      if (editingTask) {
+        // Update existing task
+        const response = await fetch('/api/admin/tasks', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: editingTask.id,
+            ...formData,
+          }),
+        })
+
+        if (response.ok) {
+          setEditingTask(null)
+          setActiveTab('list')
+          setFormData({
+            user_id: '',
+            title: '',
+            description: '',
+            status: 'pending',
+            location_id: '',
+            location_address: '',
+            location_notes: '',
+            due_date: '',
+          })
+          await loadTasks()
+          alert('Görev güncellendi')
+        } else {
+          const data = await response.json()
+          alert('Hata: ' + data.error)
+        }
+      } else {
+        // Create new task
+        const response = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        })
+
+        if (response.ok) {
+          setShowForm(false)
+          setActiveTab('list')
+          setFormData({
+            user_id: '',
+            title: '',
+            description: '',
+            status: 'pending',
+            location_id: '',
+            location_address: '',
+            location_notes: '',
+            due_date: '',
+          })
+          await loadTasks()
+          alert('Görev oluşturuldu')
+        } else {
+          const data = await response.json()
+          alert('Hata: ' + data.error)
+        }
+      }
+    } catch (error) {
+      console.error('Görev işlenirken hata:', error)
+      alert('Görev işlenirken bir hata oluştu')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleEdit = (task: Task) => {
+    setEditingTask(task)
+    setFormData({
+      user_id: task.user_profiles?.user_id || '',
+      title: task.title,
+      description: task.description || '',
+      status: task.status,
+      location_id: task.location_id || '',
+      location_address: task.location_address || '',
+      location_notes: task.location_notes || '',
+      due_date: task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : '',
+    })
+    setActiveTab('create')
+  }
+
+  const handleDelete = async (taskId: string) => {
+    if (!confirm('Bu görevi silmek istediğinizden emin misiniz?')) {
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/admin/tasks?id=${taskId}`, {
+        method: 'DELETE',
       })
 
       if (response.ok) {
-        setShowForm(false)
-        setActiveTab('list')
-        setFormData({
-          user_id: '',
-          title: '',
-          description: '',
-          location_id: '',
-          location_address: '',
-          location_notes: '',
-          due_date: '',
-        })
         await loadTasks()
-        alert('Görev oluşturuldu')
+        alert('Görev silindi')
       } else {
         const data = await response.json()
         alert('Hata: ' + data.error)
       }
     } catch (error) {
-      console.error('Görev oluşturulurken hata:', error)
-      alert('Görev oluşturulurken bir hata oluştu')
+      console.error('Görev silinirken hata:', error)
+      alert('Görev silinirken bir hata oluştu')
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingTask(null)
+    setFormData({
+      user_id: '',
+      title: '',
+      description: '',
+      status: 'pending',
+      location_id: '',
+      location_address: '',
+      location_notes: '',
+      due_date: '',
+    })
+    setActiveTab('list')
   }
 
   const getStatusBadge = (status: string) => {
@@ -237,7 +331,17 @@ export default function AdminTasksPage() {
           <div className="p-6">
             {activeTab === 'create' && (
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Yeni Görev/Talep Oluştur</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              {editingTask ? 'Görev/Talep Düzenle' : 'Yeni Görev/Talep Oluştur'}
+            </h2>
+            {editingTask && (
+              <button
+                onClick={handleCancelEdit}
+                className="mb-4 text-sm text-gray-600 hover:text-gray-900"
+              >
+                ← Geri (İptal)
+              </button>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Çalışan Seç</label>
@@ -278,6 +382,22 @@ export default function AdminTasksPage() {
                   className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 />
               </div>
+
+              {editingTask && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Durum</label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  >
+                    <option value="pending">Bekliyor</option>
+                    <option value="in_progress">Devam Ediyor</option>
+                    <option value="completed">Tamamlandı</option>
+                    <option value="cancelled">İptal Edildi</option>
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Lokasyon (Opsiyonel)</label>
@@ -330,13 +450,25 @@ export default function AdminTasksPage() {
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {loading ? 'Oluşturuluyor...' : 'Görev Oluştur'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {loading ? (editingTask ? 'Güncelleniyor...' : 'Oluşturuluyor...') : (editingTask ? 'Görevi Güncelle' : 'Görev Oluştur')}
+                </button>
+                {editingTask && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    disabled={loading}
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 disabled:opacity-50"
+                  >
+                    İptal
+                  </button>
+                )}
+              </div>
             </form>
           </div>
             )}
@@ -389,6 +521,23 @@ export default function AdminTasksPage() {
                             {task.description && (
                               <p className="text-sm text-gray-600">{task.description}</p>
                             )}
+                          </div>
+                          <div className="flex gap-2 ml-4">
+                            <button
+                              onClick={() => handleEdit(task)}
+                              className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                              title="Düzenle"
+                            >
+                              ✏️ Düzenle
+                            </button>
+                            <button
+                              onClick={() => handleDelete(task.id)}
+                              className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
+                              title="Sil"
+                              disabled={loading}
+                            >
+                              🗑️ Sil
+                            </button>
                           </div>
                         </div>
 
