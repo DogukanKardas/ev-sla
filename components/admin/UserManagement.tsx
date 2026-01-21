@@ -49,7 +49,7 @@ export default function UserManagement() {
     try {
       if (editingUser) {
         // Update user
-        const response = await fetch('/api/user-profiles', {
+        const response = await fetch(`/api/admin/users/${editingUser.user_id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -69,9 +69,28 @@ export default function UserManagement() {
           alert('Hata: ' + data.error)
         }
       } else {
-        // Create new user - this would require creating auth user first
-        // For now, we'll just show a message
-        alert('Yeni kullanıcı oluşturma özelliği yakında eklenecek. Şimdilik kullanıcılar kayıt sayfasından kayıt olabilir.')
+        // Create new user
+        const response = await fetch('/api/admin/users/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+            full_name: formData.full_name,
+            role: formData.role,
+          }),
+        })
+
+        if (response.ok) {
+          await loadUsers()
+          resetForm()
+          alert('Kullanıcı oluşturuldu')
+        } else {
+          const data = await response.json()
+          alert('Hata: ' + data.error)
+        }
       }
     } catch (error) {
       console.error('Kullanıcı kaydedilirken hata:', error)
@@ -101,6 +120,32 @@ export default function UserManagement() {
       role: user.role,
     })
     setShowForm(true)
+  }
+
+  const handleDelete = async (userId: string, userName: string) => {
+    if (!confirm(`${userName} kullanıcısını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        await loadUsers()
+        alert('Kullanıcı silindi')
+      } else {
+        const data = await response.json()
+        alert('Hata: ' + data.error)
+      }
+    } catch (error) {
+      console.error('Kullanıcı silinirken hata:', error)
+      alert('Kullanıcı silinirken bir hata oluştu')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const getRoleName = (role: string) => {
@@ -133,6 +178,32 @@ export default function UserManagement() {
             {editingUser ? 'Kullanıcıyı Düzenle' : 'Yeni Kullanıcı'}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {!editingUser && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">E-posta</label>
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Şifre</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Minimum 6 karakter"
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  />
+                </div>
+              </>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700">Ad Soyad</label>
               <input
@@ -140,7 +211,7 @@ export default function UserManagement() {
                 required
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               />
             </div>
             <div>
@@ -148,7 +219,7 @@ export default function UserManagement() {
               <select
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               >
                 <option value="employee">Çalışan</option>
                 <option value="manager">Müdür</option>
@@ -199,9 +270,15 @@ export default function UserManagement() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
                       onClick={() => handleEdit(user)}
-                      className="text-indigo-600 hover:text-indigo-900"
+                      className="text-indigo-600 hover:text-indigo-900 mr-4"
                     >
                       Düzenle
+                    </button>
+                    <button
+                      onClick={() => handleDelete(user.user_id, user.full_name)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Sil
                     </button>
                   </td>
                 </tr>
