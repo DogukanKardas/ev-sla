@@ -13,12 +13,20 @@ export default function AdminPanel() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Admin Paneli</h1>
-          <Link
-            href="/dashboard/admin/locations"
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-          >
-            Lokasyon Yönetimi
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href="/dashboard/admin/tasks"
+              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+            >
+              Görev Yönetimi
+            </Link>
+            <Link
+              href="/dashboard/admin/locations"
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            >
+              Lokasyon Yönetimi
+            </Link>
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-md">

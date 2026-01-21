@@ -65,6 +65,7 @@ export default function DashboardLayout({
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard' },
+    { name: 'Görevlerim', href: '/dashboard/tasks' },
     { name: 'Giriş/Çıkış', href: '/dashboard/attendance' },
     { name: 'İş Kayıtları', href: '/dashboard/work-logs' },
     { name: 'Mesajlar', href: '/dashboard/messages' },
