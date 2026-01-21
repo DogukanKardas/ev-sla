@@ -143,6 +143,10 @@ export default function AttendancePage() {
                     userLocation = await getCurrentPosition()
                     
                     // Check if user is within any valid location
+                    if (!userLocation) {
+                      throw new Error('Konum alınamadı')
+                    }
+                    
                     const { calculateDistance } = await import('@/lib/geolocation')
                     
                     console.log('Kullanıcı konumu:', userLocation)
