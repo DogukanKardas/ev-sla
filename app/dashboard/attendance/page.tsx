@@ -14,10 +14,37 @@ export default function AttendancePage() {
   const [locations, setLocations] = useState<any[]>([])
   const scannerRef = useRef<Html5QrcodeScanner | null>(null)
 
+  const loadLocations = async () => {
+    try {
+      const response = await fetch('/api/locations')
+      if (response.ok) {
+        const data = await response.json()
+        setLocations(data)
+      }
+    } catch (error) {
+      console.error('Lokasyonlar yüklenirken hata:', error)
+    }
+  }
+
+  const loadAttendanceHistory = useCallback(async () => {
+    try {
+      const response = await fetch('/api/attendance')
+      if (response.ok) {
+        const data = await response.json()
+        setAttendanceHistory(data)
+        if (data.length > 0) {
+          setLastAttendance(data[0])
+        }
+      }
+    } catch (error) {
+      console.error('Giriş/çıkış geçmişi yüklenirken hata:', error)
+    }
+  }, [])
+
   useEffect(() => {
     loadAttendanceHistory()
     loadLocations()
-  }, [])
+  }, [loadAttendanceHistory])
 
   useEffect(() => {
     if (scanning && !scannerRef.current) {
@@ -144,33 +171,6 @@ export default function AttendancePage() {
       }
     }
   }, [scanning, locations, loadAttendanceHistory])
-
-  const loadLocations = async () => {
-    try {
-      const response = await fetch('/api/locations')
-      if (response.ok) {
-        const data = await response.json()
-        setLocations(data)
-      }
-    } catch (error) {
-      console.error('Lokasyonlar yüklenirken hata:', error)
-    }
-  }
-
-  const loadAttendanceHistory = useCallback(async () => {
-    try {
-      const response = await fetch('/api/attendance')
-      if (response.ok) {
-        const data = await response.json()
-        setAttendanceHistory(data)
-        if (data.length > 0) {
-          setLastAttendance(data[0])
-        }
-      }
-    } catch (error) {
-      console.error('Giriş/çıkış geçmişi yüklenirken hata:', error)
-    }
-  }, [])
 
   const startScanning = () => {
     if (scannerRef.current || scanning) {
