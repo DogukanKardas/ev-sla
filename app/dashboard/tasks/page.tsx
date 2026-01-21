@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription'
 
 interface Task {
   id: string
@@ -30,11 +31,7 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(false)
   const [filterStatus, setFilterStatus] = useState<string>('all')
 
-  useEffect(() => {
-    loadTasks()
-  }, [filterStatus])
-
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     setLoading(true)
     try {
       const url = filterStatus !== 'all' 
@@ -50,7 +47,14 @@ export default function TasksPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filterStatus])
+
+  useEffect(() => {
+    loadTasks()
+  }, [loadTasks])
+
+  // Real-time subscription for task updates
+  useRealtimeSubscription('tasks', loadTasks)
 
   const updateTaskStatus = async (taskId: string, status: string) => {
     try {

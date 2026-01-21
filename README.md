@@ -4,22 +4,57 @@ IT firması için çalışan takip ve performans yönetim sistemi.
 
 ## Özellikler
 
-- ✅ Cihaz açılış takibi
+### Çalışan Takibi
+- ✅ Cihaz açılış takibi (otomatik session kayıtları)
 - ✅ QR kod ile giriş/çıkış sistemi
-- ✅ Mesaj yanıt süreleri takibi (Slack/Teams/WhatsApp)
-- ✅ Günlük iş kayıtları (serbest metin + zaman takibi)
-- ✅ KPI takibi ve değerlendirme
-- ✅ Rol bazlı dashboard (Admin/Yönetici/Çalışan)
-- ✅ Gerçek zamanlı güncellemeler
+- ✅ GPS bazlı lokasyon doğrulama
+- ✅ Gerçek zamanlı konum kontrolü
+
+### Görev Yönetimi
+- ✅ Admin'den çalışanlara görev atama
+- ✅ Lokasyon bilgisi ve Google Maps yol tarifi
+- ✅ Durum takibi (Bekliyor/Devam/Tamamlandı)
+- ✅ Gerçek zamanlı görev güncellemeleri
+
+### Mesajlaşma Takibi
+- ✅ Slack/Teams/WhatsApp entegrasyonu
+- ✅ Mesaj yanıt süreleri
+- ✅ Otomatik KPI hesaplama
+
+### İş Kayıtları
+- ✅ Günlük iş kayıtları (serbest metin + zaman)
+- ✅ Proje etiketleme
+- ✅ Verimlilik analizi
+
+### KPI ve Raporlama
+- ✅ Otomatik KPI hesaplama
+- ✅ Çalışma saatleri, yanıt süreleri, görev tamamlama
+- ✅ Aylık değerlendirmeler
+- ✅ PDF rapor export
+
+### Kullanıcı Yönetimi
+- ✅ Rol bazlı erişim (Admin/Yönetici/Çalışan)
+- ✅ Admin kullanıcı oluşturma/düzenleme/silme
+- ✅ QR kod oluşturma
+- ✅ Gerçek zamanlı dashboard
 
 ## Teknoloji Stack
 
 - **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
 - **Backend**: Next.js API Routes + Supabase
 - **Database**: Supabase (PostgreSQL)
-- **Authentication**: Supabase Auth
-- **Real-time**: Supabase Realtime
+- **Authentication**: Supabase Auth (JWT)
+- **Real-time**: Supabase Realtime subscriptions
 - **Deployment**: Vercel
+- **Geolocation**: Browser Geolocation API
+- **QR Code**: qrcode.js, html5-qrcode
+
+## Çoklu Kullanıcı Desteği
+
+✅ **Concurrent Sessions**: Birden fazla kullanıcı aynı anda kullanabilir  
+✅ **Real-time Updates**: Değişiklikler anında diğer kullanıcılara yansır  
+✅ **Session Isolation**: Her kullanıcının bağımsız session'ı  
+✅ **No Conflict**: Kullanıcılar birbirini etkilemez  
 
 ## Kurulum
 
@@ -30,107 +65,53 @@ IT firması için çalışan takip ve performans yönetim sistemi.
 npm install
 ```
 
-2. Environment variables'ı yapılandırın:
-`.env.local` dosyası oluşturun ve gerekli değişkenleri ekleyin:
+2. Environment variables'ı yapılandırın (`.env.local`):
 ```
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-3. Supabase migration'larını çalıştırın:
-Supabase dashboard'da SQL Editor'ü kullanarak `supabase/migrations/001_initial_schema.sql` dosyasını çalıştırın.
+3. Supabase migration'larını çalıştırın (SQL Editor'de sırayla):
+- `001_initial_schema.sql`
+- `002_fix_rls_policies.sql`
+- `003_add_locations.sql`
+- `004_add_tasks_locations.sql`
+- `005_fix_admin_insert_policy.sql`
 
-4. Development server'ı başlatın:
+4. Development server:
 ```bash
 npm run dev
 ```
 
 ## Vercel Deployment
 
-### 1. Vercel Projesi Oluşturma
+Detaylı bilgi için `DEPLOYMENT.md` dosyasına bakın.
 
-1. [Vercel Dashboard](https://vercel.com/dashboard) üzerinden yeni proje oluşturun
-2. GitHub repository'nizi bağlayın
-3. Vercel otomatik olarak Next.js projesini algılayacaktır
+1. GitHub'a push
+2. Vercel'de proje oluştur
+3. Environment variables ekle
+4. Otomatik deploy
 
-### 2. Environment Variables Ayarlama
+## Kullanım Kılavuzu
 
-Vercel Dashboard'da projenize gidin ve Settings > Environment Variables bölümüne ekleyin:
+### İlk Kurulum
+1. Kayıt olun (`/register`)
+2. Supabase'de rolü `admin` yapın
+3. Admin panelinden diğer kullanıcıları ekleyin
 
-- `NEXT_PUBLIC_SUPABASE_URL` - Supabase proje URL'iniz
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key
-- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (server-side only)
-- `NEXT_PUBLIC_APP_URL` - Vercel deployment URL'iniz (otomatik ayarlanır)
+### Admin İşlemleri
+- **Kullanıcı Yönetimi**: Çalışan ekle/düzenle/sil
+- **Lokasyon Yönetimi**: Ofis konumları tanımla (Google Maps ile)
+- **Görev Yönetimi**: Çalışanlara görev ata, durumları takip et
+- **KPI Değerlendirme**: Aylık performans değerlendirmesi
 
-**Önemli**: 
-- `NEXT_PUBLIC_` ile başlayan değişkenler browser'da kullanılabilir
-- `SUPABASE_SERVICE_ROLE_KEY` sadece server-side kullanılır, güvenlik için önemlidir
-
-### 3. Build Ayarları
-
-Vercel otomatik olarak Next.js projesini algılar. `vercel.json` dosyası ek yapılandırma içerir:
-- Build Command: `npm run build`
-- Output Directory: `.next`
-- Install Command: `npm install`
-
-### 4. Deploy
-
-1. GitHub'a push yapın
-2. Vercel otomatik olarak deploy edecektir
-3. Her push'ta yeni bir deployment oluşturulur
-
-### 5. Custom Domain (Opsiyonel)
-
-1. Vercel Dashboard > Settings > Domains
-2. Custom domain ekleyin
-3. DNS ayarlarını yapın
-
-## Kullanım
-
-1. İlk admin kullanıcısını oluşturun (Supabase Auth üzerinden)
-2. Admin panelinden diğer kullanıcıları ekleyin
-3. Her kullanıcı için QR kod otomatik oluşturulur
-4. Çalışanlar giriş/çıkış yapabilir, iş kayıtları tutabilir
-5. Yöneticiler ve Admin'ler dashboard'dan takım performansını görüntüleyebilir
-
-## Supabase Migration
-
-1. Supabase Dashboard'a gidin
-2. SQL Editor'ü açın
-3. `supabase/migrations/001_initial_schema.sql` dosyasının içeriğini kopyalayın
-4. SQL Editor'de çalıştırın
-
-## Webhook Yapılandırması
-
-### Slack
-1. Slack App oluşturun
-2. Webhook URL: `https://your-app.vercel.app/api/webhooks/slack`
-3. Events abone olun: `message.channels`
-
-### Teams
-1. Teams App oluşturun
-2. Webhook URL: `https://your-app.vercel.app/api/webhooks/teams`
-
-### WhatsApp
-1. WhatsApp Business API kurulumu yapın
-2. Webhook URL: `https://your-app.vercel.app/api/webhooks/whatsapp`
-3. Verify Token ayarlayın
-
-## Sorun Giderme
-
-### Build Hataları
-- Environment variables'ların doğru ayarlandığından emin olun
-- `npm run build` komutunu local'de çalıştırıp hataları kontrol edin
-
-### Database Bağlantı Hataları
-- Supabase migration'larının çalıştığını kontrol edin
-- Supabase project URL ve keys'lerin doğru olduğundan emin olun
-
-### Authentication Sorunları
-- Supabase Auth ayarlarını kontrol edin
-- Redirect URL'lerin doğru ayarlandığından emin olun
+### Çalışan İşlemleri
+- **Giriş/Çıkış**: QR kod okut (lokasyon doğrulama ile)
+- **Görevlerim**: Görevleri gör, durum güncelle, yol tarifi al
+- **İş Kayıtları**: Günlük yapılan işleri kaydet
+- **Mesajlar**: Gelen mesajlara yanıt sürelerini kaydet
+- **KPI**: Kendi performansını görüntüle
 
 ## Lisans
 
