@@ -76,11 +76,46 @@ export default function AttendancePage() {
           const scanner = new Html5Qrcode('qr-reader')
           scannerRef.current = scanner
 
-          // Try to use back camera (environment) directly
-          // This is more reliable than selecting by device ID
+          // Get available cameras and select back camera
+          let cameraId: string | null = null
+          try {
+            const devices = await Html5Qrcode.getCameras()
+            if (devices && devices.length > 0) {
+              // Find back camera by label (most reliable method)
+              const backCamera = devices.find(device => {
+                const label = device.label.toLowerCase()
+                return label.includes('back') || 
+                       label.includes('rear') || 
+                       label.includes('environment') ||
+                       label.includes('facing back') ||
+                       label.includes('camera2') // Android often uses camera2 for back camera
+              })
+              
+              // If no back camera found by label, use the last camera (usually back on mobile)
+              // Or try to find by deviceId pattern
+              if (backCamera) {
+                cameraId = backCamera.id
+              } else if (devices.length > 1) {
+                // On mobile, usually last camera is back camera
+                cameraId = devices[devices.length - 1].id
+              } else {
+                cameraId = devices[0].id
+              }
+            } else {
+              throw new Error('Kamera bulunamadı')
+            }
+          } catch (cameraListError: any) {
+            console.error('Kamera listesi alınamadı:', cameraListError)
+            setCameraError('Kamera listesi alınamadı. Lütfen sayfayı yenileyip tekrar deneyin.')
+            setScanning(false)
+            scannerRef.current = null
+            return
+          }
+
+          // Start scanning with selected camera
           try {
             await scanner.start(
-              { facingMode: 'environment' },
+              cameraId!,
               {
                 fps: 10,
                 qrbox: { width: 250, height: 250 },
@@ -177,125 +212,21 @@ export default function AttendancePage() {
               }
             )
           } catch (cameraStartError: any) {
-            // If environment camera fails, try to get device list and use back camera
-            console.warn('Arka kamera başlatılamadı, alternatif deneniyor:', cameraStartError)
-            try {
-              const devices = await Html5Qrcode.getCameras()
-              if (devices && devices.length > 0) {
-                // Find back camera by label
-                const backCamera = devices.find(device => {
-                  const label = device.label.toLowerCase()
-                  return label.includes('back') || 
-                         label.includes('rear') || 
-                         label.includes('environment') ||
-                         label.includes('facing back')
-                })
-                
-                const cameraId = backCamera?.id || devices[devices.length - 1].id // Use last camera (usually back on mobile)
-                
-                await scanner.start(
-                  cameraId,
-                  {
-                    fps: 10,
-                    qrbox: { width: 250, height: 250 },
-                    aspectRatio: 1.0,
-                  },
-                  async (decodedText) => {
-                    await scanner.stop()
-                    scanner.clear()
-                    scannerRef.current = null
-                    setScanning(false)
-
-                    setLoading(true)
-                    try {
-                      let userLocation = null
-                      let validLocation = false
-                      let locationId = null
-                      let distance = null
-
-                      try {
-                        userLocation = await getCurrentPosition()
-                        const { calculateDistance } = await import('@/lib/geolocation')
-                        
-                        for (const loc of locations) {
-                          const dist = calculateDistance(
-                            userLocation.latitude,
-                            userLocation.longitude,
-                            parseFloat(loc.latitude),
-                            parseFloat(loc.longitude)
-                          )
-
-                          if (dist <= loc.radius_meters) {
-                            validLocation = true
-                            locationId = loc.id
-                            distance = Math.round(dist)
-                            break
-                          }
-                        }
-
-                        if (locations.length > 0 && !validLocation) {
-                          alert('Tanımlı bir lokasyonun yakınında değilsiniz. Lütfen ofise yakın olduğunuzdan emin olun.')
-                          setLoading(false)
-                          return
-                        }
-                      } catch (locationError: any) {
-                        console.warn('Konum alınamadı:', locationError)
-                        if (locations.length > 0) {
-                          alert('Konum izni gerekli. Lütfen konum erişimine izin verin.')
-                          setLoading(false)
-                          return
-                        }
-                      }
-
-                      const response = await fetch('/api/attendance/qr-scan', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                          qr_code: decodedText,
-                          location_id: locationId,
-                          latitude: userLocation?.latitude,
-                          longitude: userLocation?.longitude,
-                          distance_meters: distance,
-                        }),
-                      })
-
-                      const data = await response.json()
-
-                      if (response.ok) {
-                        setLastAttendance(data.attendance)
-                        loadAttendanceHistory()
-                        alert(
-                          data.type === 'check-in'
-                            ? 'Giriş yapıldı!'
-                            : `Çıkış yapıldı! Süre: ${data.duration_minutes} dakika`
-                        )
-                      } else {
-                        alert('Hata: ' + data.error)
-                      }
-                    } catch (error) {
-                      console.error('QR kod işleme hatası:', error)
-                      alert('QR kod işlenirken bir hata oluştu')
-                    } finally {
-                      setLoading(false)
-                    }
-                  },
-                  (errorMessage) => {
-                    console.log('Scanning:', errorMessage)
-                  }
-                )
-              } else {
-                throw new Error('Kamera bulunamadı')
-              }
-            } catch (fallbackError: any) {
-              console.error('Kamera başlatma hatası:', fallbackError)
-              setCameraError('Kamera başlatılamadı. Lütfen kamera erişimine izin verin ve tekrar deneyin.')
-              setScanning(false)
-              if (scannerRef.current) {
+            console.error('Kamera başlatma hatası:', cameraStartError)
+            setCameraError(
+              cameraStartError.message?.includes('NotAllowedError') || 
+              cameraStartError.message?.includes('permission')
+                ? 'Kamera erişimine izin verilmedi. Lütfen tarayıcı ayarlarından kamera iznini açın.'
+                : 'Kamera başlatılamadı. Lütfen sayfayı yenileyip tekrar deneyin.'
+            )
+            setScanning(false)
+            if (scannerRef.current) {
+              try {
                 scannerRef.current.clear()
-                scannerRef.current = null
+              } catch (clearError) {
+                // Ignore clear errors
               }
+              scannerRef.current = null
             }
           }
         } catch (error: any) {
