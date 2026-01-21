@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { parseGoogleMapsUrl } from '@/lib/google-maps-parser'
 
 interface Location {
   id: string
@@ -17,6 +18,7 @@ export default function LocationsPage() {
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [showMap, setShowMap] = useState(false)
+  const [mapsUrl, setMapsUrl] = useState('')
   const [formData, setFormData] = useState({
     name: '',
     address: '',
@@ -84,6 +86,26 @@ export default function LocationsPage() {
         longitude: parseFloat(lng),
       })
       setShowMap(true)
+    }
+  }
+
+  const handleMapsUrlPaste = () => {
+    if (!mapsUrl) {
+      alert('Lütfen Google Maps linki girin')
+      return
+    }
+
+    const parsed = parseGoogleMapsUrl(mapsUrl)
+    if (parsed) {
+      setFormData({
+        ...formData,
+        latitude: parsed.latitude,
+        longitude: parsed.longitude,
+      })
+      setShowMap(true)
+      alert('Koordinatlar başarıyla alındı!')
+    } else {
+      alert('Google Maps linki tanınamadı. Lütfen geçerli bir Google Maps URL\'si girin.')
     }
   }
 
@@ -156,27 +178,52 @@ export default function LocationsPage() {
                 />
               </div>
               <div className="space-y-4">
+                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    🔗 Google Maps Linki Yapıştır
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={mapsUrl}
+                      onChange={(e) => setMapsUrl(e.target.value)}
+                      placeholder="https://www.google.com/maps/place/..."
+                      className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 border text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleMapsUrlPaste}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 whitespace-nowrap"
+                    >
+                      Koordinat Al
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-2">
+                    Google Maps&apos;te konuma sağ tıklayın → &quot;Linki kopyala&quot; → Buraya yapıştırın
+                  </p>
+                </div>
+
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={getCurrentLocation}
                     className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                   >
-                    📍 Mevcut Konumu Al
+                    📍 Mevcut Konum
                   </button>
                   <button
                     type="button"
                     onClick={openGoogleMaps}
                     className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
                   >
-                    🗺️ Google Maps'te Aç
+                    🗺️ Maps&apos;te Aç
                   </button>
                   <button
                     type="button"
                     onClick={handleMapClick}
                     className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
                   >
-                    📋 Koordinat Gir
+                    📋 Manuel Gir
                   </button>
                 </div>
                 
@@ -225,13 +272,12 @@ export default function LocationsPage() {
                 </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
-                  <p className="font-semibold mb-2">Google Maps&apos;ten Koordinat Alma:</p>
-                  <ol className="list-decimal list-inside space-y-1">
-                    <li>Yukarıdaki &quot;Google Maps&apos;te Aç&quot; butonuna tıklayın</li>
-                    <li>Haritada istediğiniz konuma sağ tıklayın</li>
-                    <li>Koordinatları kopyalayın (örn: 41.0082, 28.9784)</li>
-                    <li>&quot;Koordinat Gir&quot; ile buraya yapıştırın</li>
-                  </ol>
+                  <p className="font-semibold mb-2">💡 Nasıl Kullanılır?</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li><strong>Google Maps Link</strong>: Konumun linkini yapıştırın (en kolay)</li>
+                    <li><strong>Mevcut Konum</strong>: Şu anda bulunduğunuz yeri kullanın</li>
+                    <li><strong>Manuel Gir</strong>: Koordinatları elle girin</li>
+                  </ul>
                 </div>
               </div>
               <div>
