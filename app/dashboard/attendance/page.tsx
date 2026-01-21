@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
-import { getCurrentPosition, isWithinRadius } from '@/lib/geolocation'
+import { getCurrentPosition, isWithinRadius, GeoLocation } from '@/lib/geolocation'
 
 export default function AttendancePage() {
   const [scanning, setScanning] = useState(false)
@@ -134,10 +134,10 @@ export default function AttendancePage() {
                 setLoading(true)
                 try {
                   // Get user location
-                  let userLocation = null
+                  let userLocation: GeoLocation | null = null
                   let validLocation = false
-                  let locationId = null
-                  let distance = null
+                  let locationId: string | null = null
+                  let distance: number | null = null
 
                   try {
                     userLocation = await getCurrentPosition()
