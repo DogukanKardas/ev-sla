@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
@@ -19,6 +19,132 @@ export default function AttendancePage() {
     loadLocations()
   }, [])
 
+  useEffect(() => {
+    if (scanning && !scannerRef.current) {
+      // Wait for DOM to update before initializing scanner
+      const timer = setTimeout(() => {
+        const qrReaderElement = document.getElementById('qr-reader')
+        if (!qrReaderElement) {
+          console.error('QR reader element not found')
+          setScanning(false)
+          return
+        }
+
+        const scanner = new Html5QrcodeScanner(
+          'qr-reader',
+          {
+            qrbox: { width: 250, height: 250 },
+            fps: 5,
+            aspectRatio: 1.0,
+            // Mobile optimization
+            rememberLastUsedCamera: true,
+            showTorchButtonIfSupported: true,
+          },
+          false
+        )
+
+        scanner.render(
+          async (decodedText) => {
+            setScanning(false)
+            scanner.clear()
+            scannerRef.current = null
+
+            setLoading(true)
+            try {
+              // Get user location
+              let userLocation = null
+              let validLocation = false
+              let locationId = null
+              let distance = null
+
+              try {
+                userLocation = await getCurrentPosition()
+                
+                // Check if user is within any valid location
+                const { calculateDistance } = await import('@/lib/geolocation')
+                
+                for (const loc of locations) {
+                  const dist = calculateDistance(
+                    userLocation.latitude,
+                    userLocation.longitude,
+                    parseFloat(loc.latitude),
+                    parseFloat(loc.longitude)
+                  )
+
+                  if (dist <= loc.radius_meters) {
+                    validLocation = true
+                    locationId = loc.id
+                    distance = Math.round(dist)
+                    break
+                  }
+                }
+
+                if (locations.length > 0 && !validLocation) {
+                  alert('Tanımlı bir lokasyonun yakınında değilsiniz. Lütfen ofise yakın olduğunuzdan emin olun.')
+                  setLoading(false)
+                  return
+                }
+              } catch (locationError: any) {
+                console.warn('Konum alınamadı:', locationError)
+                if (locations.length > 0) {
+                  alert('Konum izni gerekli. Lütfen konum erişimine izin verin.')
+                  setLoading(false)
+                  return
+                }
+              }
+
+              const response = await fetch('/api/attendance/qr-scan', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  qr_code: decodedText,
+                  location_id: locationId,
+                  latitude: userLocation?.latitude,
+                  longitude: userLocation?.longitude,
+                  distance_meters: distance,
+                }),
+              })
+
+              const data = await response.json()
+
+              if (response.ok) {
+                setLastAttendance(data.attendance)
+                loadAttendanceHistory()
+                alert(
+                  data.type === 'check-in'
+                    ? 'Giriş yapıldı!'
+                    : `Çıkış yapıldı! Süre: ${data.duration_minutes} dakika`
+                )
+              } else {
+                alert('Hata: ' + data.error)
+              }
+            } catch (error) {
+              console.error('QR kod işleme hatası:', error)
+              alert('QR kod işlenirken bir hata oluştu')
+            } finally {
+              setLoading(false)
+            }
+          },
+          (errorMessage) => {
+            // Ignore scanning errors
+          }
+        )
+
+        scannerRef.current = scanner
+      }, 100) // Small delay to ensure DOM is updated
+
+      return () => {
+        clearTimeout(timer)
+        if (scannerRef.current) {
+          scannerRef.current.clear()
+          scannerRef.current = null
+        }
+      }
+    }
+  }, [scanning, locations, loadAttendanceHistory])
+
   const loadLocations = async () => {
     try {
       const response = await fetch('/api/locations')
@@ -31,7 +157,7 @@ export default function AttendancePage() {
     }
   }
 
-  const loadAttendanceHistory = async () => {
+  const loadAttendanceHistory = useCallback(async () => {
     try {
       const response = await fetch('/api/attendance')
       if (response.ok) {
@@ -44,117 +170,13 @@ export default function AttendancePage() {
     } catch (error) {
       console.error('Giriş/çıkış geçmişi yüklenirken hata:', error)
     }
-  }
+  }, [])
 
   const startScanning = () => {
-    if (scannerRef.current) {
+    if (scannerRef.current || scanning) {
       return
     }
-
     setScanning(true)
-    const scanner = new Html5QrcodeScanner(
-      'qr-reader',
-      {
-        qrbox: { width: 250, height: 250 },
-        fps: 5,
-        aspectRatio: 1.0,
-        // Mobile optimization
-        rememberLastUsedCamera: true,
-        showTorchButtonIfSupported: true,
-      },
-      false
-    )
-
-    scanner.render(
-      async (decodedText) => {
-        setScanning(false)
-        scanner.clear()
-        scannerRef.current = null
-
-        setLoading(true)
-        try {
-          // Get user location
-          let userLocation = null
-          let validLocation = false
-          let locationId = null
-          let distance = null
-
-          try {
-            userLocation = await getCurrentPosition()
-            
-            // Check if user is within any valid location
-            const { calculateDistance } = await import('@/lib/geolocation')
-            
-            for (const loc of locations) {
-              const dist = calculateDistance(
-                userLocation.latitude,
-                userLocation.longitude,
-                parseFloat(loc.latitude),
-                parseFloat(loc.longitude)
-              )
-
-              if (dist <= loc.radius_meters) {
-                validLocation = true
-                locationId = loc.id
-                distance = Math.round(dist)
-                break
-              }
-            }
-
-            if (locations.length > 0 && !validLocation) {
-              alert('Tanımlı bir lokasyonun yakınında değilsiniz. Lütfen ofise yakın olduğunuzdan emin olun.')
-              setLoading(false)
-              return
-            }
-          } catch (locationError: any) {
-            console.warn('Konum alınamadı:', locationError)
-            if (locations.length > 0) {
-              alert('Konum izni gerekli. Lütfen konum erişimine izin verin.')
-              setLoading(false)
-              return
-            }
-          }
-
-          const response = await fetch('/api/attendance/qr-scan', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              qr_code: decodedText,
-              location_id: locationId,
-              latitude: userLocation?.latitude,
-              longitude: userLocation?.longitude,
-              distance_meters: distance,
-            }),
-          })
-
-          const data = await response.json()
-
-          if (response.ok) {
-            setLastAttendance(data.attendance)
-            await loadAttendanceHistory()
-            alert(
-              data.type === 'check-in'
-                ? 'Giriş yapıldı!'
-                : `Çıkış yapıldı! Süre: ${data.duration_minutes} dakika`
-            )
-          } else {
-            alert('Hata: ' + data.error)
-          }
-        } catch (error) {
-          console.error('QR kod işleme hatası:', error)
-          alert('QR kod işlenirken bir hata oluştu')
-        } finally {
-          setLoading(false)
-        }
-      },
-      (errorMessage) => {
-        // Ignore scanning errors
-      }
-    )
-
-    scannerRef.current = scanner
   }
 
   const stopScanning = () => {
