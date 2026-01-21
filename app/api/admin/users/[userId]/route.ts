@@ -83,8 +83,8 @@ export async function DELETE(
   }
 
   // Delete auth user using service role
-  const { createClient: create } = require('@supabase/supabase-js')
-  const serviceSupabase = create(
+  const { createClient: createServiceClient } = await import('@supabase/supabase-js')
+  const serviceSupabase = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )

@@ -32,7 +32,8 @@ export async function POST(request: Request) {
   }
 
   // Create auth user using service role
-  const serviceSupabase = createClient(
+  const { createClient: createServiceClient } = await import('@supabase/supabase-js')
+  const serviceSupabase = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
@@ -71,10 +72,5 @@ export async function POST(request: Request) {
     user: authData.user,
     profile: profileData,
   })
-}
-
-function createClient(url: string, key: string) {
-  const { createClient: create } = require('@supabase/supabase-js')
-  return create(url, key)
 }
 
