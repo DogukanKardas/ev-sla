@@ -20,7 +20,10 @@ export default function AttendancePage() {
       const response = await fetch('/api/locations')
       if (response.ok) {
         const data = await response.json()
+        console.log('Yüklenen lokasyonlar:', data)
         setLocations(data)
+      } else {
+        console.error('Lokasyonlar yüklenemedi:', response.statusText)
       }
     } catch (error) {
       console.error('Lokasyonlar yüklenirken hata:', error)
@@ -142,24 +145,73 @@ export default function AttendancePage() {
                     // Check if user is within any valid location
                     const { calculateDistance } = await import('@/lib/geolocation')
                     
+                    console.log('Kullanıcı konumu:', userLocation)
+                    console.log('Lokasyonlar:', locations)
+                    
                     for (const loc of locations) {
+                      // Ensure latitude and longitude are numbers
+                      const locLat = typeof loc.latitude === 'string' 
+                        ? parseFloat(loc.latitude) 
+                        : Number(loc.latitude)
+                      const locLon = typeof loc.longitude === 'string' 
+                        ? parseFloat(loc.longitude) 
+                        : Number(loc.longitude)
+                      const radius = typeof loc.radius_meters === 'string'
+                        ? parseInt(loc.radius_meters, 10)
+                        : Number(loc.radius_meters) || 100
+                      
+                      // Validate coordinates
+                      if (isNaN(locLat) || isNaN(locLon)) {
+                        console.warn('Geçersiz lokasyon koordinatları:', loc)
+                        continue
+                      }
+                      
                       const dist = calculateDistance(
                         userLocation.latitude,
                         userLocation.longitude,
-                        parseFloat(loc.latitude),
-                        parseFloat(loc.longitude)
+                        locLat,
+                        locLon
                       )
 
-                      if (dist <= loc.radius_meters) {
+                      console.log(`Lokasyon: ${loc.name}, Mesafe: ${Math.round(dist)}m, Radius: ${radius}m`)
+
+                      if (dist <= radius) {
                         validLocation = true
                         locationId = loc.id
                         distance = Math.round(dist)
+                        console.log(`✅ Geçerli lokasyon bulundu: ${loc.name} (${distance}m)`)
                         break
                       }
                     }
 
                     if (locations.length > 0 && !validLocation) {
-                      alert('Tanımlı bir lokasyonun yakınında değilsiniz. Lütfen ofise yakın olduğunuzdan emin olun.')
+                      const closestLocation = locations.reduce((closest, loc) => {
+                        const locLat = typeof loc.latitude === 'string' 
+                          ? parseFloat(loc.latitude) 
+                          : Number(loc.latitude)
+                        const locLon = typeof loc.longitude === 'string' 
+                          ? parseFloat(loc.longitude) 
+                          : Number(loc.longitude)
+                        if (isNaN(locLat) || isNaN(locLon)) return closest
+                        
+                        const dist = calculateDistance(
+                          userLocation.latitude,
+                          userLocation.longitude,
+                          locLat,
+                          locLon
+                        )
+                        return !closest || dist < closest.distance 
+                          ? { name: loc.name, distance: dist } 
+                          : closest
+                      }, null as { name: string, distance: number } | null)
+                      
+                      const closestDist = closestLocation ? Math.round(closestLocation.distance) : 'bilinmiyor'
+                      alert(
+                        `Tanımlı bir lokasyonun yakınında değilsiniz.\n\n` +
+                        `En yakın lokasyon: ${closestLocation?.name || 'bilinmiyor'}\n` +
+                        `Mesafe: ${closestDist}m\n\n` +
+                        `Lütfen tanımlı bir lokasyona yakın olduğunuzdan emin olun.`
+                      )
                       setLoading(false)
                       return
                     }
