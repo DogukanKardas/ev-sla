@@ -16,6 +16,7 @@ export default function LocationsPage() {
   const [locations, setLocations] = useState<Location[]>([])
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const [showMap, setShowMap] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     address: '',
@@ -56,12 +57,34 @@ export default function LocationsPage() {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
         })
+        setShowMap(true)
         alert('Mevcut konumunuz alındı')
       },
       (error) => {
         alert('Konum alınamadı: ' + error.message)
       }
     )
+  }
+
+  const openGoogleMaps = () => {
+    const url = formData.latitude && formData.longitude
+      ? `https://www.google.com/maps/search/?api=1&query=${formData.latitude},${formData.longitude}`
+      : 'https://www.google.com/maps'
+    window.open(url, '_blank')
+  }
+
+  const handleMapClick = () => {
+    const lat = prompt('Google Maps\'ten kopyaladığınız enlemi girin:')
+    const lng = prompt('Google Maps\'ten kopyaladığınız boylamı girin:')
+    
+    if (lat && lng) {
+      setFormData({
+        ...formData,
+        latitude: parseFloat(lat),
+        longitude: parseFloat(lng),
+      })
+      setShowMap(true)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -132,28 +155,83 @@ export default function LocationsPage() {
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 border"
                 />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Enlem (Latitude)</label>
-                  <input
-                    type="number"
-                    step="0.000001"
-                    required
-                    value={formData.latitude}
-                    onChange={(e) => setFormData({ ...formData, latitude: parseFloat(e.target.value) })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 border"
-                  />
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={getCurrentLocation}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  >
+                    📍 Mevcut Konumu Al
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openGoogleMaps}
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  >
+                    🗺️ Google Maps'te Aç
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleMapClick}
+                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+                  >
+                    📋 Koordinat Gir
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Boylam (Longitude)</label>
-                  <input
-                    type="number"
-                    step="0.000001"
-                    required
-                    value={formData.longitude}
-                    onChange={(e) => setFormData({ ...formData, longitude: parseFloat(e.target.value) })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 border"
-                  />
+                
+                {showMap && formData.latitude !== 0 && formData.longitude !== 0 && (
+                  <div className="border rounded-lg overflow-hidden">
+                    <iframe
+                      width="100%"
+                      height="300"
+                      frameBorder="0"
+                      style={{ border: 0 }}
+                      src={`https://www.google.com/maps?q=${formData.latitude},${formData.longitude}&output=embed&z=16`}
+                      allowFullScreen
+                    ></iframe>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Enlem (Latitude)</label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      required
+                      value={formData.latitude}
+                      onChange={(e) => {
+                        setFormData({ ...formData, latitude: parseFloat(e.target.value) || 0 })
+                        setShowMap(true)
+                      }}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 border"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Boylam (Longitude)</label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      required
+                      value={formData.longitude}
+                      onChange={(e) => {
+                        setFormData({ ...formData, longitude: parseFloat(e.target.value) || 0 })
+                        setShowMap(true)
+                      }}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 border"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+                  <p className="font-semibold mb-2">Google Maps&apos;ten Koordinat Alma:</p>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li>Yukarıdaki &quot;Google Maps&apos;te Aç&quot; butonuna tıklayın</li>
+                    <li>Haritada istediğiniz konuma sağ tıklayın</li>
+                    <li>Koordinatları kopyalayın (örn: 41.0082, 28.9784)</li>
+                    <li>&quot;Koordinat Gir&quot; ile buraya yapıştırın</li>
+                  </ol>
                 </div>
               </div>
               <div>
@@ -169,18 +247,11 @@ export default function LocationsPage() {
               </div>
               <div className="flex gap-2">
                 <button
-                  type="button"
-                  onClick={getCurrentLocation}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-                >
-                  Mevcut Konumu Al
-                </button>
-                <button
                   type="submit"
-                  disabled={loading}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+                  disabled={loading || formData.latitude === 0 || formData.longitude === 0}
+                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
                 >
-                  {loading ? 'Kaydediliyor...' : 'Kaydet'}
+                  {loading ? 'Kaydediliyor...' : 'Lokasyonu Kaydet'}
                 </button>
               </div>
             </form>
