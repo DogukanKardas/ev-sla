@@ -33,11 +33,7 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from('tasks')
-    .select(`
-      *,
-      locations(id, name, address, latitude, longitude),
-      user_profiles!tasks_assigned_by_fkey(full_name)
-    `)
+    .select('*')
     .eq('user_id', targetUserId)
     .order('created_at', { ascending: false })
 
@@ -45,13 +41,38 @@ export async function GET(request: Request) {
     query = query.eq('status', status)
   }
 
-  const { data, error } = await query.limit(100)
+  const { data: tasksData, error } = await query.limit(100)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json(data)
+  // Manually fetch related data to avoid relationship errors
+  if (tasksData && tasksData.length > 0) {
+    const locationIds = tasksData.map(t => t.location_id).filter(Boolean)
+    const assignedByIds = tasksData.map(t => t.assigned_by).filter(Boolean)
+
+    // Fetch locations
+    const { data: locationsData } = locationIds.length > 0
+      ? await supabase.from('locations').select('*').in('id', locationIds)
+      : { data: [] }
+
+    // Fetch user profiles for assigned_by
+    const { data: profilesData } = assignedByIds.length > 0
+      ? await supabase.from('user_profiles').select('user_id, full_name').in('user_id', assignedByIds)
+      : { data: [] }
+
+    // Merge data
+    const enrichedTasks = tasksData.map(task => ({
+      ...task,
+      locations: locationsData?.find(loc => loc.id === task.location_id) || null,
+      user_profiles: profilesData?.find(p => p.user_id === task.assigned_by) || null,
+    }))
+
+    return NextResponse.json(enrichedTasks)
+  }
+
+  return NextResponse.json(tasksData || [])
 }
 
 export async function POST(request: Request) {

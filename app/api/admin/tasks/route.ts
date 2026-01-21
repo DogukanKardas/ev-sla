@@ -29,12 +29,7 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from('tasks')
-    .select(`
-      *,
-      user_profiles!tasks_user_id_fkey(id, user_id, full_name, role),
-      locations(id, name, address, latitude, longitude),
-      assigned_by_profile:user_profiles!tasks_assigned_by_fkey(full_name)
-    `)
+    .select('*')
     .order('created_at', { ascending: false })
 
   if (status && status !== 'all') {
@@ -45,12 +40,40 @@ export async function GET(request: Request) {
     query = query.eq('user_id', user_id)
   }
 
-  const { data, error } = await query.limit(200)
+  const { data: tasksData, error } = await query.limit(200)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json(data)
+  // Manually fetch related data
+  if (tasksData && tasksData.length > 0) {
+    const userIds = [...new Set(tasksData.map(t => t.user_id))]
+    const locationIds = tasksData.map(t => t.location_id).filter(Boolean)
+    const assignedByIds = tasksData.map(t => t.assigned_by).filter(Boolean)
+
+    // Fetch all related data in parallel
+    const [locationsRes, assignedToRes, assignedByRes] = await Promise.all([
+      locationIds.length > 0
+        ? supabase.from('locations').select('*').in('id', locationIds)
+        : Promise.resolve({ data: [] }),
+      supabase.from('user_profiles').select('user_id, full_name, role').in('user_id', userIds),
+      assignedByIds.length > 0
+        ? supabase.from('user_profiles').select('user_id, full_name').in('user_id', assignedByIds)
+        : Promise.resolve({ data: [] }),
+    ])
+
+    // Merge data
+    const enrichedTasks = tasksData.map(task => ({
+      ...task,
+      user_profiles: assignedToRes.data?.find(p => p.user_id === task.user_id) || null,
+      locations: locationsRes.data?.find(loc => loc.id === task.location_id) || null,
+      assigned_by_profile: assignedByRes.data?.find(p => p.user_id === task.assigned_by) || null,
+    }))
+
+    return NextResponse.json(enrichedTasks)
+  }
+
+  return NextResponse.json(tasksData || [])
 }
 
