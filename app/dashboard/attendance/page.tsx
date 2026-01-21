@@ -184,7 +184,7 @@ export default function AttendancePage() {
                       }
                     }
 
-                    if (locations.length > 0 && !validLocation) {
+                    if (locations.length > 0 && !validLocation && userLocation) {
                       const closestLocation = locations.reduce((closest, loc) => {
                         const locLat = typeof loc.latitude === 'string' 
                           ? parseFloat(loc.latitude) 
