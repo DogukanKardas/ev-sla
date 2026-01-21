@@ -45,3 +45,9 @@ CREATE POLICY "users_insert_own"
   ON user_profiles FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+CREATE POLICY "admins_insert_any"
+  ON user_profiles FOR INSERT
+  WITH CHECK (
+    (SELECT role FROM public.user_profiles WHERE user_id = auth.uid() LIMIT 1) = 'admin'
+  );
+

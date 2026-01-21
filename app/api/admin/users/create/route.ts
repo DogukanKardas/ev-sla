@@ -48,10 +48,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: authError?.message || 'User creation failed' }, { status: 500 })
   }
 
-  // Create user profile
+  // Create user profile using service role to bypass RLS
   const qrCode = generateQRCodeString(authData.user.id)
 
-  const { data: profileData, error: profileError } = await supabase
+  const { data: profileData, error: profileError } = await serviceSupabase
     .from('user_profiles')
     .insert({
       user_id: authData.user.id,
