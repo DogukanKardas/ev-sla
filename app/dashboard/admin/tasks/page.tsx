@@ -26,7 +26,9 @@ interface Task {
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
   due_date: string | null
   created_at: string
+  started_at: string | null
   completed_at: string | null
+  duration_minutes: number | null
   user_profiles: {
     id: string
     user_id: string
@@ -390,7 +392,7 @@ export default function AdminTasksPage() {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-gray-600 mb-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600 mb-2">
                           <div>
                             <strong>Çalışan:</strong> {task.user_profiles?.full_name || '-'}
                           </div>
@@ -399,12 +401,23 @@ export default function AdminTasksPage() {
                               <strong>Termin:</strong> {format(new Date(task.due_date), 'dd MMM yyyy', { locale: tr })}
                             </div>
                           )}
+                          {task.started_at && (
+                            <div className="text-blue-600">
+                              <strong>⏱️ Başlama:</strong> {format(new Date(task.started_at), 'dd MMM HH:mm', { locale: tr })}
+                            </div>
+                          )}
                           {task.assigned_by_profile && (
                             <div>
                               <strong>Atayan:</strong> {task.assigned_by_profile.full_name}
                             </div>
                           )}
                         </div>
+
+                        {task.duration_minutes && (
+                          <div className="bg-green-50 border border-green-200 rounded p-2 text-sm text-green-800 mb-2">
+                            ⏱️ <strong>Tamamlama Süresi:</strong> {Math.floor(task.duration_minutes / 60)} saat {task.duration_minutes % 60} dakika
+                          </div>
+                        )}
 
                         {task.locations && (
                           <div className="bg-blue-50 border border-blue-200 rounded p-2 text-sm">

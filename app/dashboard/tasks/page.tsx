@@ -11,6 +11,9 @@ interface Task {
   description: string | null
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
   due_date: string | null
+  started_at: string | null
+  completed_at: string | null
+  duration_minutes: number | null
   location_id: string | null
   location_address: string | null
   location_notes: string | null
@@ -173,12 +176,25 @@ export default function TasksPage() {
                   )}
 
                   <div className="flex justify-between items-center mt-3">
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-600 space-y-1">
                       {task.due_date && (
-                        <span>Termin: {format(new Date(task.due_date), 'dd MMMM yyyy', { locale: tr })}</span>
+                        <div>Termin: {format(new Date(task.due_date), 'dd MMMM yyyy', { locale: tr })}</div>
+                      )}
+                      {task.started_at && (
+                        <div className="text-blue-600">
+                          ⏱️ Başlangıç: {format(new Date(task.started_at), 'dd MMM HH:mm', { locale: tr })}
+                        </div>
+                      )}
+                      {task.completed_at && (
+                        <div className="text-green-600">
+                          ✓ Tamamlanma: {format(new Date(task.completed_at), 'dd MMM HH:mm', { locale: tr })}
+                          {task.duration_minutes && (
+                            <span className="ml-2">({Math.floor(task.duration_minutes / 60)}s {task.duration_minutes % 60}dk)</span>
+                          )}
+                        </div>
                       )}
                       {task.user_profiles && (
-                        <span className="ml-4">Atayan: {task.user_profiles.full_name}</span>
+                        <div>Atayan: {task.user_profiles.full_name}</div>
                       )}
                     </div>
                     {task.status !== 'completed' && task.status !== 'cancelled' && (

@@ -142,20 +142,43 @@ export async function PUT(request: Request) {
   }
 
   const body = await request.json()
-  const { id, status, completed_at } = body
+  const { id, status, completed_at, started_at } = body
 
   if (!id) {
     return NextResponse.json({ error: 'Task ID required' }, { status: 400 })
   }
 
+  // Get current task data
+  const { data: currentTask } = await supabase
+    .from('tasks')
+    .select('status, started_at, completed_at')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single()
+
   const updateData: any = {}
   if (status !== undefined) updateData.status = status
-  if (completed_at !== undefined) updateData.completed_at = completed_at
 
-  // If marking as completed, set completed_at
-  if (status === 'completed' && !completed_at) {
-    updateData.completed_at = new Date().toISOString()
+  // Auto-set started_at when status changes to in_progress
+  if (status === 'in_progress' && !currentTask?.started_at) {
+    updateData.started_at = new Date().toISOString()
   }
+
+  // Auto-set completed_at when status changes to completed
+  if (status === 'completed' && !currentTask?.completed_at) {
+    updateData.completed_at = new Date().toISOString()
+    
+    // Calculate duration if started_at exists
+    if (currentTask?.started_at) {
+      const start = new Date(currentTask.started_at)
+      const end = new Date()
+      updateData.duration_minutes = Math.floor((end.getTime() - start.getTime()) / 60000)
+    }
+  }
+
+  // Manual overrides
+  if (completed_at !== undefined) updateData.completed_at = completed_at
+  if (started_at !== undefined) updateData.started_at = started_at
 
   const { data, error } = await supabase
     .from('tasks')
