@@ -29,6 +29,9 @@ interface Task {
   started_at: string | null
   completed_at: string | null
   duration_minutes: number | null
+  location_id: string | null
+  location_address: string | null
+  location_notes: string | null
   user_profiles: {
     id: string
     user_id: string
