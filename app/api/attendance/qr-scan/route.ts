@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { qr_code } = body
+  const { qr_code, location_id, latitude, longitude, distance_meters } = body
 
   if (!qr_code) {
     return NextResponse.json({ error: 'QR code required' }, { status: 400 })
@@ -72,6 +72,10 @@ export async function POST(request: Request) {
         user_id: user.id,
         check_in: new Date().toISOString(),
         qr_code_used: qr_code,
+        location_id: location_id || null,
+        latitude: latitude || null,
+        longitude: longitude || null,
+        distance_meters: distance_meters || null,
       })
       .select()
       .single()

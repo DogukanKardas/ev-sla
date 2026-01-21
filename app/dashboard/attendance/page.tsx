@@ -4,17 +4,32 @@ import { useState, useEffect, useRef } from 'react'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
+import { getCurrentPosition, isWithinRadius } from '@/lib/geolocation'
 
 export default function AttendancePage() {
   const [scanning, setScanning] = useState(false)
   const [lastAttendance, setLastAttendance] = useState<any>(null)
   const [attendanceHistory, setAttendanceHistory] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [locations, setLocations] = useState<any[]>([])
   const scannerRef = useRef<Html5QrcodeScanner | null>(null)
 
   useEffect(() => {
     loadAttendanceHistory()
+    loadLocations()
   }, [])
+
+  const loadLocations = async () => {
+    try {
+      const response = await fetch('/api/locations')
+      if (response.ok) {
+        const data = await response.json()
+        setLocations(data)
+      }
+    } catch (error) {
+      console.error('Lokasyonlar yüklenirken hata:', error)
+    }
+  }
 
   const loadAttendanceHistory = async () => {
     try {
@@ -58,12 +73,60 @@ export default function AttendancePage() {
 
         setLoading(true)
         try {
+          // Get user location
+          let userLocation = null
+          let validLocation = false
+          let locationId = null
+          let distance = null
+
+          try {
+            userLocation = await getCurrentPosition()
+            
+            // Check if user is within any valid location
+            const { calculateDistance } = await import('@/lib/geolocation')
+            
+            for (const loc of locations) {
+              const dist = calculateDistance(
+                userLocation.latitude,
+                userLocation.longitude,
+                parseFloat(loc.latitude),
+                parseFloat(loc.longitude)
+              )
+
+              if (dist <= loc.radius_meters) {
+                validLocation = true
+                locationId = loc.id
+                distance = Math.round(dist)
+                break
+              }
+            }
+
+            if (locations.length > 0 && !validLocation) {
+              alert('Tanımlı bir lokasyonun yakınında değilsiniz. Lütfen ofise yakın olduğunuzdan emin olun.')
+              setLoading(false)
+              return
+            }
+          } catch (locationError: any) {
+            console.warn('Konum alınamadı:', locationError)
+            if (locations.length > 0) {
+              alert('Konum izni gerekli. Lütfen konum erişimine izin verin.')
+              setLoading(false)
+              return
+            }
+          }
+
           const response = await fetch('/api/attendance/qr-scan', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ qr_code: decodedText }),
+            body: JSON.stringify({
+              qr_code: decodedText,
+              location_id: locationId,
+              latitude: userLocation?.latitude,
+              longitude: userLocation?.longitude,
+              distance_meters: distance,
+            }),
           })
 
           const data = await response.json()
