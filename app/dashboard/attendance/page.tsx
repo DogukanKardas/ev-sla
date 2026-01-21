@@ -42,6 +42,10 @@ export default function AttendancePage() {
       {
         qrbox: { width: 250, height: 250 },
         fps: 5,
+        aspectRatio: 1.0,
+        // Mobile optimization
+        rememberLastUsedCamera: true,
+        showTorchButtonIfSupported: true,
       },
       false
     )
