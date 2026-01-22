@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -45,6 +45,46 @@ export default function AdminAttendancePage() {
   const [endDate, setEndDate] = useState<string>('')
   const [loadingData, setLoadingData] = useState(false)
 
+  const loadUsers = useCallback(async () => {
+    try {
+      const response = await fetch('/api/user-profiles/all')
+      if (response.ok) {
+        const data = await response.json()
+        setUsers(data.filter((u: UserProfile) => u.role === 'employee'))
+      }
+    } catch (error) {
+      console.error('Kullanıcılar yüklenirken hata:', error)
+    }
+  }, [])
+
+  const loadAttendance = useCallback(async () => {
+    setLoadingData(true)
+    try {
+      const params = new URLSearchParams()
+      if (selectedUserId !== 'all') {
+        params.append('user_id', selectedUserId)
+      }
+      if (startDate) {
+        params.append('start_date', startDate)
+      }
+      if (endDate) {
+        params.append('end_date', endDate)
+      }
+
+      const response = await fetch(`/api/admin/attendance?${params.toString()}`)
+      if (response.ok) {
+        const data = await response.json()
+        setAttendance(data)
+      } else {
+        console.error('Giriş-çıkış kayıtları yüklenirken hata:', await response.text())
+      }
+    } catch (error) {
+      console.error('Giriş-çıkış kayıtları yüklenirken hata:', error)
+    } finally {
+      setLoadingData(false)
+    }
+  }, [selectedUserId, startDate, endDate])
+
   useEffect(() => {
     async function checkAccess() {
       try {
@@ -80,53 +120,13 @@ export default function AdminAttendancePage() {
     }
 
     checkAccess()
-  }, [router])
+  }, [router, loadUsers])
 
   useEffect(() => {
     if (authorized) {
       loadAttendance()
     }
-  }, [authorized, selectedUserId, startDate, endDate])
-
-  async function loadUsers() {
-    try {
-      const response = await fetch('/api/user-profiles/all')
-      if (response.ok) {
-        const data = await response.json()
-        setUsers(data.filter((u: UserProfile) => u.role === 'employee'))
-      }
-    } catch (error) {
-      console.error('Kullanıcılar yüklenirken hata:', error)
-    }
-  }
-
-  async function loadAttendance() {
-    setLoadingData(true)
-    try {
-      const params = new URLSearchParams()
-      if (selectedUserId !== 'all') {
-        params.append('user_id', selectedUserId)
-      }
-      if (startDate) {
-        params.append('start_date', startDate)
-      }
-      if (endDate) {
-        params.append('end_date', endDate)
-      }
-
-      const response = await fetch(`/api/admin/attendance?${params.toString()}`)
-      if (response.ok) {
-        const data = await response.json()
-        setAttendance(data)
-      } else {
-        console.error('Giriş-çıkış kayıtları yüklenirken hata:', await response.text())
-      }
-    } catch (error) {
-      console.error('Giriş-çıkış kayıtları yüklenirken hata:', error)
-    } finally {
-      setLoadingData(false)
-    }
-  }
+  }, [authorized, loadAttendance])
 
   function formatDateTime(dateString: string | null): string {
     if (!dateString) return '-'
@@ -161,11 +161,7 @@ export default function AdminAttendancePage() {
     )
   }
 
-  if (!authorized) {
-    return null
-  }
-
-  // Set default date range (last 30 days)
+  // Set default date range (last 30 days) - only once on mount
   useEffect(() => {
     if (!startDate && !endDate) {
       const today = new Date()
@@ -175,7 +171,12 @@ export default function AdminAttendancePage() {
       setEndDate(today.toISOString().split('T')[0])
       setStartDate(thirtyDaysAgo.toISOString().split('T')[0])
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  if (!authorized) {
+    return null
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
