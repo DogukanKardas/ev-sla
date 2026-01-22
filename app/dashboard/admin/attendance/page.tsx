@@ -41,8 +41,27 @@ export default function AdminAttendancePage() {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
   const [users, setUsers] = useState<UserProfile[]>([])
   const [selectedUserId, setSelectedUserId] = useState<string>('all')
-  const [startDate, setStartDate] = useState<string>('')
-  const [endDate, setEndDate] = useState<string>('')
+  const [error, setError] = useState<string | null>(null)
+  
+  // Initialize default date range (last 30 days)
+  const getDefaultDates = () => {
+    try {
+      const today = new Date()
+      const thirtyDaysAgo = new Date(today)
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      return {
+        start: thirtyDaysAgo.toISOString().split('T')[0],
+        end: today.toISOString().split('T')[0],
+      }
+    } catch (err) {
+      console.error('Date initialization error:', err)
+      return { start: '', end: '' }
+    }
+  }
+  
+  const defaultDates = getDefaultDates()
+  const [startDate, setStartDate] = useState<string>(defaultDates.start)
+  const [endDate, setEndDate] = useState<string>(defaultDates.end)
   const [loadingData, setLoadingData] = useState(false)
 
   const loadUsers = useCallback(async () => {
@@ -50,15 +69,25 @@ export default function AdminAttendancePage() {
       const response = await fetch('/api/user-profiles/all')
       if (response.ok) {
         const data = await response.json()
-        setUsers(data.filter((u: UserProfile) => u.role === 'employee'))
+        if (Array.isArray(data)) {
+          setUsers(data.filter((u: UserProfile) => u.role === 'employee'))
+        } else {
+          setUsers([])
+        }
+      } else {
+        const errorText = await response.text()
+        console.error('Kullanıcılar yüklenirken hata:', errorText)
+        setError('Kullanıcılar yüklenirken bir hata oluştu')
       }
     } catch (error) {
       console.error('Kullanıcılar yüklenirken hata:', error)
+      setError('Kullanıcılar yüklenirken bir hata oluştu')
     }
   }, [])
 
   const loadAttendance = useCallback(async () => {
     setLoadingData(true)
+    setError(null)
     try {
       const params = new URLSearchParams()
       if (selectedUserId !== 'all') {
@@ -74,12 +103,22 @@ export default function AdminAttendancePage() {
       const response = await fetch(`/api/admin/attendance?${params.toString()}`)
       if (response.ok) {
         const data = await response.json()
-        setAttendance(data)
+        if (Array.isArray(data)) {
+          setAttendance(data)
+        } else {
+          setAttendance([])
+          setError('Geçersiz veri formatı')
+        }
       } else {
-        console.error('Giriş-çıkış kayıtları yüklenirken hata:', await response.text())
+        const errorText = await response.text()
+        console.error('Giriş-çıkış kayıtları yüklenirken hata:', errorText)
+        setError('Giriş-çıkış kayıtları yüklenirken bir hata oluştu')
+        setAttendance([])
       }
     } catch (error) {
       console.error('Giriş-çıkış kayıtları yüklenirken hata:', error)
+      setError('Giriş-çıkış kayıtları yüklenirken bir hata oluştu')
+      setAttendance([])
     } finally {
       setLoadingData(false)
     }
@@ -89,30 +128,36 @@ export default function AdminAttendancePage() {
     async function checkAccess() {
       try {
         const supabase = createClient()
+        if (!supabase) {
+          throw new Error('Supabase client oluşturulamadı')
+        }
+        
         const {
           data: { user },
+          error: userError,
         } = await supabase.auth.getUser()
 
-        if (!user) {
+        if (userError || !user) {
           router.push('/login')
           return
         }
 
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from('user_profiles')
           .select('role')
           .eq('user_id', user.id)
           .single()
 
-        if (!profile || (profile.role !== 'admin' && profile.role !== 'manager')) {
+        if (profileError || !profile || (profile.role !== 'admin' && profile.role !== 'manager')) {
           router.push('/dashboard')
           return
         }
 
         setAuthorized(true)
-        loadUsers()
+        await loadUsers()
       } catch (error) {
         console.error('Erişim kontrolü hatası:', error)
+        setError('Erişim kontrolü sırasında bir hata oluştu')
         router.push('/dashboard')
       } finally {
         setLoading(false)
@@ -160,19 +205,6 @@ export default function AdminAttendancePage() {
       </div>
     )
   }
-
-  // Set default date range (last 30 days) - only once on mount
-  useEffect(() => {
-    if (!startDate && !endDate) {
-      const today = new Date()
-      const thirtyDaysAgo = new Date(today)
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-      
-      setEndDate(today.toISOString().split('T')[0])
-      setStartDate(thirtyDaysAgo.toISOString().split('T')[0])
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   if (!authorized) {
     return null
@@ -245,6 +277,14 @@ export default function AdminAttendancePage() {
           </div>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+            <p className="font-medium">Hata:</p>
+            <p>{error}</p>
+          </div>
+        )}
+
         {/* Attendance Table */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="overflow-x-auto">
@@ -252,6 +292,10 @@ export default function AdminAttendancePage() {
               <div className="p-8 text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
                 <p className="mt-2 text-gray-600">Yükleniyor...</p>
+              </div>
+            ) : error ? (
+              <div className="p-8 text-center text-red-500">
+                {error}
               </div>
             ) : attendance.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
