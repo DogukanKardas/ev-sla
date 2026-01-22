@@ -15,6 +15,12 @@ export default function AdminPanel() {
           <h1 className="text-3xl font-bold text-gray-900">Admin Paneli</h1>
           <div className="flex gap-2">
             <Link
+              href="/dashboard/admin/attendance"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Giriş-Çıkış Takibi
+            </Link>
+            <Link
               href="/dashboard/admin/tasks"
               className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
             >
